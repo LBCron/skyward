@@ -1,5 +1,8 @@
 # Skyward API
 
+> [!CAUTION]
+> **Work in progress: Skyward API doesn't do anything yet.** Version 0.1 is a skeleton. The gems install and load, but none of the features described here are built. This README is the spec for what's coming, not documentation of what exists. Don't depend on it yet.
+
 A small, fast Ruby web framework where **an endpoint is a method**.
 
 Its inputs are keyword arguments. Its response is the return value. Add a type signature and Skyward API uses it to coerce and validate the request, check your code with Steep, and write your OpenAPI docs for you. Leave the signature off and it's still just Ruby.

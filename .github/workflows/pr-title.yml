@@ -11,7 +11,8 @@ on:
       - synchronize
 
 jobs:
-  lint:
+  title:
+    name: pr-title
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read

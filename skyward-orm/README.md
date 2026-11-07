@@ -1,5 +1,8 @@
 # Skyward ORM
 
+> [!CAUTION]
+> **Work in progress: Skyward ORM doesn't do anything yet.** Version 0.1 is a skeleton. The gems install and load, but none of the features described here are built. This README is the spec for what's coming, not documentation of what exists. Don't depend on it yet.
+
 A small, fast Ruby ORM where **a class is a table and its rows are values**.
 
 You write a plain Ruby class with a typed reader for each column, and tell Skyward ORM which table it lives in. The class is then the table: you query it, write to it and migrate it. What comes back are immutable instances of your class. There are no callbacks, no dirty tracking and no lazy loading. You get your data and the SQL that fetched it.

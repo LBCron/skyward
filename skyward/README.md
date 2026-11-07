@@ -1,5 +1,8 @@
 # Skyward
 
+> [!CAUTION]
+> **Work in progress: Skyward doesn't do anything yet.** Version 0.1 is a skeleton. The gems install and load, but none of the features described here are built. This README is the spec for what's coming, not documentation of what exists. Don't depend on it yet.
+
 Typed Ruby web apps, where an endpoint is a method and a row is a value. This gem installs both halves of Skyward:
 
 - [Skyward API](../skyward-api/README.md), a web framework where an endpoint is a method, typed with RBS.

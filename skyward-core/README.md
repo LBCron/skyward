@@ -1,5 +1,8 @@
 # Skyward Core
 
+> [!CAUTION]
+> **Work in progress: Skyward Core doesn't do anything yet.** Version 0.1 is a skeleton. The gems install and load, but none of the features described here are built. This README is the spec for what's coming, not documentation of what exists. Don't depend on it yet.
+
 The plumbing that [Skyward API](../skyward-api/README.md) and [Skyward ORM](../skyward-orm/README.md) share. You don't add it to your Gemfile: each of them depends on it, at exactly the same version.
 
 ## What it owns
