@@ -1,0 +1,27 @@
+# Fixes and merges Renovate's branches when CI finishes on them; the logic
+# lives in bottrall/deps.
+
+name: deps
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: ["renovate/**"]
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+jobs:
+  deps:
+    uses: bottrall/deps/.github/workflows/fix.yml@main
+    secrets: inherit
+    with:
+      # The shared defaults, widened to every gem's lockfile and signatures.
+      safe-paths: |
+        ^([a-z-]+/)?Gemfile\.lock$
+        ^rbs_collection\.lock\.yaml$
+        ^([a-z-]+/)?sig/
+        ^\.rubocop(_todo)?\.yml$

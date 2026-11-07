@@ -1,0 +1,35 @@
+name: release
+
+# Pushing a vX.Y.Z tag publishes every gem at that version. bin/release
+# prepares the version bump and changelog.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Each gem's trusted publisher on RubyGems names this workflow and
+    # environment, so no API key is stored here.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - run: bundle exec rake release:verify
+      - run: bundle exec rake package:check
+      - uses: rubygems/configure-rubygems-credentials@v2.1.0
+      # In dependency order, so each gem's exact pins resolve once it's live.
+      - run: |
+          for gem in skyward-core skyward-api skyward-orm skyward; do
+            gem push "pkg/${gem}-${GITHUB_REF_NAME#v}.gem"
+          done

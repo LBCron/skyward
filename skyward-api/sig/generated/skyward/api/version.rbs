@@ -1,0 +1,7 @@
+# Generated from lib/skyward/api/version.rb with RBS::Inline
+
+module Skyward
+  class API
+    VERSION: String
+  end
+end

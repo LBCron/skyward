@@ -1,0 +1,11 @@
+/.bundle/
+/*/.bundle/
+/coverage/
+/pkg/
+/tmp/
+/vendor/
+/*/vendor/
+/*/*.gem
+/.gem_rbs_collection/
+/.claude/worktrees/
+.DS_Store

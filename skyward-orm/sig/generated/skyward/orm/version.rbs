@@ -1,0 +1,7 @@
+# Generated from lib/skyward/orm/version.rb with RBS::Inline
+
+module Skyward
+  module ORM
+    VERSION: String
+  end
+end

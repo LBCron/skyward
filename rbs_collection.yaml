@@ -1,0 +1,23 @@
+sources:
+  # Pinned so an upstream push can't break typecheck with no gem change.
+  - type: git
+    name: ruby/gem_rbs_collection
+    remote: https://github.com/ruby/gem_rbs_collection.git
+    revision: f7a1647651e333fcb55b7f8a7a4ddec9bcb756c2
+    repo_dir: gems
+
+path: .gem_rbs_collection
+
+gems:
+  # Each Steep target loads the Skyward gems' signatures it needs from the
+  # Steepfile, so none may arrive through the collection.
+  - name: skyward
+    ignore: true
+  - name: skyward-api
+    ignore: true
+  - name: skyward-core
+    ignore: true
+  - name: skyward-orm
+    ignore: true
+  # Ignoring the Skyward gems also drops their dependencies, so name those here.
+  - name: zeitwerk

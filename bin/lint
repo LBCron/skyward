@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Any arguments go to RuboCop, so `bin/lint -a` autocorrects.
+set -e
+exec bundle exec rake lint RUBOCOP_OPTS="$*"
