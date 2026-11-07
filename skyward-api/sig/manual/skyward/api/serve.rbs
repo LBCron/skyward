@@ -1,3 +1,8 @@
 module Skyward::API::Serve
   extend ::Skyward::API::Serve
+
+  # What config.ru builds, and what the reloader answers with when loading it fails.
+  interface _RackApp
+    def call: (Hash[String, untyped] env) -> untyped
+  end
 end

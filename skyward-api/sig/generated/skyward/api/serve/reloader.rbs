@@ -1,0 +1,44 @@
+# Generated from lib/skyward/api/serve/reloader.rb with RBS::Inline
+
+class Skyward::API::Serve::Reloader
+  INTERVAL: Float
+
+  @watch: ^() -> Hash[String, Time]
+
+  @load: ^() -> Skyward::API::Serve::_RackApp
+
+  @clock: ^() -> Float
+
+  @mutex: Thread::Mutex
+
+  @checked_at: Float
+
+  @files: Hash[String, Time]
+
+  @app: Skyward::API::Serve::_RackApp
+
+  # @rbs watch: ^() -> Hash[String, Time]
+  # @rbs load: ^() -> Skyward::API::Serve::_RackApp
+  # @rbs clock: ^() -> Float
+  # @rbs return: void
+  def initialize: (watch: ^() -> Hash[String, Time], load: ^() -> Skyward::API::Serve::_RackApp, clock: ^() -> Float) -> void
+
+  # The app is taken under the lock but called outside it, so a request in
+  # flight finishes on the app it started with.
+  # @rbs env: Hash[String, untyped]
+  # @rbs return: untyped
+  def call: (Hash[String, untyped] env) -> untyped
+
+  private
+
+  # @rbs return: Skyward::API::Serve::_RackApp
+  def current: () -> Skyward::API::Serve::_RackApp
+
+  # A SyntaxError or LoadError is a ScriptError, not a StandardError.
+  # @rbs return: Skyward::API::Serve::_RackApp
+  def attempt: () -> Skyward::API::Serve::_RackApp
+
+  # @rbs error: Exception
+  # @rbs return: Skyward::API::App::response
+  def failure: (Exception error) -> Skyward::API::App::response
+end
