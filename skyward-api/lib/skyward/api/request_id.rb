@@ -17,7 +17,7 @@ class Skyward::API::RequestId
   end
 
   # @rbs env: Hash[String, untyped]
-  # @rbs return: Skyward::API::App::response
+  # @rbs return: Skyward::API::rack_response
   def call(env)
     incoming = env["HTTP_X_REQUEST_ID"]
     # Matched as binary, because Regexp#match? raises on a String that isn't valid UTF-8.

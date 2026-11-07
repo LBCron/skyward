@@ -382,9 +382,20 @@ run App
 ```
 
 - `mount` attaches an API object at a prefix.
-- `use` is ordinary Rack middleware.
+- `use` is ordinary Rack middleware, and takes the same arguments as `Rack::Builder#use`. It wraps the whole app, in declaration order: the first `use` is outermost, wherever it sits among the other calls.
 - `static` serves files from a directory.
 - `Skyward.app` returns a frozen Rack app. Nothing about it changes after boot.
+
+Skyward API doesn't build CORS, compression or sessions, because Rack already has them. CORS, for example, is [rack-cors](https://github.com/cyu/rack-cors) through `use`, which answers a preflight `OPTIONS` before it reaches your routes:
+
+```ruby
+app.use Rack::Cors do
+  allow do
+    origins "https://todos.example"
+    resource "*", headers: :any, methods: %i[get post delete]
+  end
+end
+```
 
 ---
 
@@ -566,3 +577,4 @@ This README is the spec. Skyward 0.1 is a skeleton: the gem installs and loads, 
 - **HTTP's own answers.** A path that matches routes only under other methods gets a 405 problem+json with an `allow` header listing the methods of every route matching it, in the order `GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS`, with `HEAD` wherever there's `GET` and always `OPTIONS`. `HEAD` runs the GET route and answers its status and headers with an empty body. `OPTIONS` on a routed path answers 204 with `allow`, and on any other path 404. Static files and CORS are still to come.
 - **`skyward serve`.** Skyward API registers it with the `skyward` command. It runs the current directory's `config.ru`, needing no `app.rb`, under one Falcon process bound to `localhost`, on `PORT` (9292 by default), with `RACK_ENV=development` unless it's already set. It writes no files. With no `config.ru`, or no Falcon in the bundle `skyward` runs in, it exits 1 saying what to do. Under `bundle exec` that's the app's bundle; run bare, `skyward` sees every installed gem. Reloading on file changes, and the other commands, are still to come.
 - **The test client.** `Skyward::Test.client(app)` drives any object with `call(env)` in-process, with no server, and never loads Minitest or RSpec. Its `get`, `post`, `put`, `patch`, `delete`, `head` and `options` each take a path, which may include a query string. `json:` sends a JSON body with `content-type: application/json`, and without it no body is sent. `headers:` sends request headers by their HTTP names, and `cookies:` sends a Hash as a `cookie` header. Each returns a frozen response with `status`, `headers` as the app returned them, `body` as text, and `json`, the body parsed with Symbol keys when the content type is JSON or `+json` and the body isn't empty, and `nil` otherwise. The client reads the whole body and closes it when it responds to `close`.
+- **Middleware.** `use` adds Rack middleware, with the same arguments as `Rack::Builder#use`, so CORS comes from rack-cors. Middleware wraps the routes in declaration order, the first `use` outermost, wherever it sits relative to `mount`. Request IDs sit outside it, so a response from middleware still carries one. The stack is built once, at boot, and the app stays frozen, though the middleware objects themselves aren't frozen. Skyward's logs and error handling, which will also sit outside it, are still to come.
