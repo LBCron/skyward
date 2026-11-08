@@ -17,6 +17,7 @@ describe Skyward::API::App do
   end
   let(:middleware) { [] }
   let(:documents) { {} }
+  let(:providers) { [] }
   let(:returns) do
     id = Skyward::Types::Field.new(name: :id, type: Skyward::Types::Scalar.new(name: :string), required: true)
     [Skyward::Types::Record.new(fields: [id])]
@@ -42,9 +43,10 @@ describe Skyward::API::App do
         summary: nil,
         description: nil,
         keywords:,
+        providers: [],
         returns:,
         signature: "(id: String) -> { id: String }",
-        inputs: Skyward::API::Inputs.new(keywords, max_body_size: 10),
+        inputs: Skyward::API::Inputs.new(keywords, providers:, max_body_size: 10),
         serializer:
       )
     end
@@ -186,6 +188,22 @@ describe Skyward::API::App do
 
     it "answers a body over the limit with a 413 problem" do
       assert_equal problem(413, "Content Too Large"), request("PUT", "/todos/42", body: '"Ship it now"')
+    end
+
+    describe "when a provider answers" do
+      let(:providers) do
+        responses = [Skyward::API::Router::Response.new(klass: Skyward::Unauthorized)]
+        serializer = Skyward::API::Serializer.new(responses, label: "The :current_user provider")
+        callable = ->(_request) { Skyward.unauthorized("Sign in first") }
+        [Skyward::API::Router::Provider.new(name: :current_user, callable:, value: nil, responses:, serializer:)]
+      end
+
+      it "answers with its response instead of calling the method" do
+        detail = ',"detail":"Sign in first"'
+
+        assert_equal problem(401, "Unauthorized", {}, detail),
+                     app.call({ "REQUEST_METHOD" => "GET", "PATH_INFO" => "/todos/42", "skyward.request_id" => "abc" })
+      end
     end
 
     it "answers a body that isn't JSON with a 415 problem" do

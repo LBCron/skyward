@@ -15,22 +15,32 @@ module Skyward::API::Boot
   # untyped, which is what rbs-inline writes for a method with no annotations.
   ANY: RBS::Types::Bases::Any
 
-  # @rbs mounts: Array[Skyward::API::Builder::Mount]
-  # @rbs reader: Skyward::Types::Reader
-  # @rbs max_body_size: Integer
-  # @rbs strict: bool
-  # @rbs return: Array[Skyward::API::Router::Endpoint]
-  def endpoints: (Array[Skyward::API::Builder::Mount] mounts, reader: Skyward::Types::Reader, max_body_size: Integer, strict: bool) -> Array[Skyward::API::Router::Endpoint]
+  # @rbs (Array[Skyward::API::Builder::Mount] mounts, providers: Hash[Symbol, Skyward::API::_Provider & Object],
+  #       reader: Skyward::Types::Reader, max_body_size: Integer, strict: bool) ->
+  #       Array[Skyward::API::Router::Endpoint]
+  def endpoints: (Array[Skyward::API::Builder::Mount] mounts, providers: Hash[Symbol, Skyward::API::_Provider & Object], reader: Skyward::Types::Reader, max_body_size: Integer, strict: bool) -> Array[Skyward::API::Router::Endpoint]
 
   private
+
+  # @rbs (Skyward::API::_Provider & Object callable) -> Method
+  def call_method: (Skyward::API::_Provider & Object callable) -> Method
+
+  # The reader finds a signature only for an instance method of a class.
+  # @rbs (Symbol name, Skyward::API::_Provider & Object callable) -> String?
+  def single_object: (Symbol name, Skyward::API::_Provider & Object callable) -> String?
+
+  # @rbs (Symbol name, Skyward::API::_Provider & Object callable, Skyward::Types::Reader reader) ->
+  #       Skyward::API::Router::Provider
+  def provider: (Symbol name, Skyward::API::_Provider & Object callable, Skyward::Types::Reader reader) -> Skyward::API::Router::Provider
 
   # @rbs mount: Skyward::API::Builder::Mount
   # @rbs route: Skyward::API::Route
   # @rbs built: Array[Skyward::API::Router::Endpoint]
+  # @rbs providers: Hash[Symbol, Skyward::API::Router::Provider]
   # @rbs reader: Skyward::Types::Reader
   # @rbs max_body_size: Integer
   # @rbs return: Skyward::API::Router::Endpoint
-  def boot: (Skyward::API::Builder::Mount mount, Skyward::API::Route route, Array[Skyward::API::Router::Endpoint] built, Skyward::Types::Reader reader, Integer max_body_size) -> Skyward::API::Router::Endpoint
+  def boot: (Skyward::API::Builder::Mount mount, Skyward::API::Route route, Array[Skyward::API::Router::Endpoint] built, Hash[Symbol, Skyward::API::Router::Provider] providers, Skyward::Types::Reader reader, Integer max_body_size) -> Skyward::API::Router::Endpoint
 
   # @rbs route: Skyward::API::Route
   # @rbs return: String?
@@ -62,10 +72,11 @@ module Skyward::API::Boot
   # @rbs verb: String
   # @rbs pattern: Array[String | Symbol]
   # @rbs label: String
+  # @rbs providers: Hash[Symbol, Skyward::API::Router::Provider]
   # @rbs reader: Skyward::Types::Reader
   # @rbs max_body_size: Integer
   # @rbs return: Skyward::API::Router::Endpoint | String
-  def endpoint: (Skyward::API api, Skyward::API::Route route, String verb, Array[String | Symbol] pattern, String label, Skyward::Types::Reader reader, Integer max_body_size) -> (Skyward::API::Router::Endpoint | String)
+  def endpoint: (Skyward::API api, Skyward::API::Route route, String verb, Array[String | Symbol] pattern, String label, Hash[Symbol, Skyward::API::Router::Provider] providers, Skyward::Types::Reader reader, Integer max_body_size) -> (Skyward::API::Router::Endpoint | String)
 
   # @rbs klass: Class
   # @rbs to: Symbol
@@ -73,11 +84,11 @@ module Skyward::API::Boot
   # @rbs return: RBS::MethodType | String | nil
   def method_type: (Class klass, Symbol to, Skyward::Types::Reader reader) -> (RBS::MethodType | String | nil)
 
-  # @rbs klass: Class
-  # @rbs to: Symbol
+  # @rbs owner: Module
+  # @rbs name: Symbol
   # @rbs reader: Skyward::Types::Reader
   # @rbs return: RBS::MethodType?
-  def signature: (Class klass, Symbol to, Skyward::Types::Reader reader) -> RBS::MethodType?
+  def signature: (Module owner, Symbol name, Skyward::Types::Reader reader) -> RBS::MethodType?
 
   # @rbs parameters: Method::param_types
   # @rbs type: RBS::Types::function?
@@ -109,9 +120,10 @@ module Skyward::API::Boot
   # @rbs required: bool
   # @rbs type: RBS::Types::t
   # @rbs pattern: Array[String | Symbol]
+  # @rbs providers: Hash[Symbol, Skyward::API::Router::Provider]
   # @rbs reader: Skyward::Types::Reader
-  # @rbs return: Skyward::API::Router::Keyword | String
-  def keyword: (Symbol name, bool required, RBS::Types::t type, Array[String | Symbol] pattern, Skyward::Types::Reader reader) -> (Skyward::API::Router::Keyword | String)
+  # @rbs return: Skyward::API::Router::Keyword | Skyward::API::Router::Provider | String
+  def keyword: (Symbol name, bool required, RBS::Types::t type, Array[String | Symbol] pattern, Hash[Symbol, Skyward::API::Router::Provider] providers, Skyward::Types::Reader reader) -> (Skyward::API::Router::Keyword | Skyward::API::Router::Provider | String)
 
   # @rbs name: Symbol
   # @rbs pattern: Array[String | Symbol]
@@ -122,6 +134,24 @@ module Skyward::API::Boot
   # @rbs type: RBS::Types::t
   # @rbs return: Skyward::API::Router::Keyword | String
   def request: (bool required, RBS::Types::t type) -> (Skyward::API::Router::Keyword | String)
+
+  # A provided keyword's type is the provider's to give, so it's compared, never
+  # read, except that an untyped keyword is left unchecked, as untyped code is.
+  # @rbs name: Symbol
+  # @rbs type: RBS::Types::t
+  # @rbs provider: Skyward::API::Router::Provider
+  # @rbs return: Skyward::API::Router::Provider | String
+  def provided: (Symbol name, RBS::Types::t type, Skyward::API::Router::Provider provider) -> (Skyward::API::Router::Provider | String)
+
+  # @rbs type: RBS::Types::t
+  # @rbs return: bool
+  def untyped_type?: (RBS::Types::t type) -> bool
+
+  # A union means the same in any order.
+  # @rbs types: Array[RBS::Types::t]
+  # @rbs others: Array[RBS::Types::t]
+  # @rbs return: bool
+  def same?: (Array[RBS::Types::t] types, Array[RBS::Types::t] others) -> bool
 
   # @rbs name: Symbol
   # @rbs source: :path | :query | :body | :request
@@ -150,6 +180,10 @@ module Skyward::API::Boot
   #   | Skyward::Types::Unreadable | nil
   def response: (RBS::Types::t type, Skyward::Types::Reader reader) -> (Skyward::API::Router::Created | Skyward::API::Router::Response | Skyward::API::Router::Rack | Skyward::Types::Unreadable | nil)
 
+  # @rbs type: RBS::Types::t
+  # @rbs return: Skyward::API::Router::Response?
+  def response_value: (RBS::Types::t type) -> Skyward::API::Router::Response?
+
   # @rbs type: RBS::Types::ClassInstance
   # @rbs reader: Skyward::Types::Reader
   # @rbs return: Skyward::API::Router::Created | Skyward::Types::Unreadable
@@ -167,8 +201,9 @@ module Skyward::API::Boot
   # Only a keyword's whole type, nullable or not, or a member of the return type
   # counts, so strict: true lets through untyped inside a type, as in Array[untyped].
   # @rbs endpoint: Skyward::API::Router::Endpoint
+  # @rbs function: RBS::Types::Function
   # @rbs return: String?
-  def untyped_parts: (Skyward::API::Router::Endpoint endpoint) -> String?
+  def untyped_parts: (Skyward::API::Router::Endpoint endpoint, RBS::Types::Function function) -> String?
 
   # @rbs subject: String
   # @rbs type: Skyward::Types::Unreadable

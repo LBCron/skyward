@@ -22,9 +22,10 @@ describe Skyward::API::Routes do
         summary: nil,
         description: nil,
         keywords: [],
+        providers: [],
         returns: [],
         signature:,
-        inputs: Skyward::API::Inputs.new([], max_body_size: 10),
+        inputs: Skyward::API::Inputs.new([], providers: [], max_body_size: 10),
         serializer: Skyward::API::Serializer.new([], label: "")
       )
     end

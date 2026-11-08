@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-# Signed in sig/boot_fixtures.rbs, except Unsigned, UnsignedPositional and the
-# classes refused before their signature is read: Unrouted, Private and
+# Signed in sig/boot_fixtures.rbs, except Unsigned, UnsignedPositional, UnsignedProvider, ModuleProvider,
+# ClassProvider, UnsignedProvided and the classes refused before their signature is read: Unrouted, Private and
 # Protected. Each class that fails to boot has one problem.
 module BootFixtures
   Todo = Data.define(:id, :title)
@@ -355,5 +355,84 @@ module BootFixtures
     post "/", to: :create
 
     def create = created({})
+  end
+
+  CurrentUser = Class.new do
+    def call(request)
+      return Skyward.unauthorized("Sign in first") unless request.headers["authorization"] == "Bearer ada"
+
+      User.new(id: 1, name: "Ada", password_hash: "$2a$12$secret")
+    end
+  end
+
+  Sessions = Class.new do
+    def user_for(request) = CurrentUser.new.call(request)
+  end
+
+  Visitor = Class.new do
+    def call(_request) = nil
+  end
+
+  Guard = Class.new do
+    def call(_request) = Skyward.forbidden("Admins only")
+  end
+
+  UnsignedProvider = Class.new do
+    def call(_request) = "anyone"
+  end
+
+  ModuleProvider = Module.new do
+    extend self
+
+    def call(_request) = "anyone"
+  end
+
+  ClassProvider = Class.new do
+    def self.call(_request) = "anyone"
+  end
+
+  Authenticated = Class.new(Skyward::API) do
+    get "/me", to: :me
+    get "/todos", to: :index
+
+    def me(current_user:) = current_user
+
+    def index(tenant:, current_user:, limit: 50) = [Todo.new(id: limit, title: "#{tenant} #{current_user.name}")]
+  end
+
+  Visiting = Class.new(Skyward::API) do
+    get "/", to: :index
+
+    def index(visitor:) = [visitor].compact
+  end
+
+  MistypedUser = Class.new(Skyward::API) do
+    get "/", to: :index
+
+    def index(current_user:) = [current_user]
+  end
+
+  Guarded = Class.new(Skyward::API) do
+    get "/", to: :index
+
+    def index(admin:) = [admin]
+  end
+
+  ProvidedPath = Class.new(Skyward::API) do
+    get "/:current_user", to: :show
+
+    def show(current_user:) = Todo.new(id: 1, title: current_user)
+  end
+
+  UnsignedProvided = Class.new(Skyward::API) do
+    get "/", to: :index
+
+    def index(current_user:, limit: 50) = [Todo.new(id: limit, title: current_user.name)]
+  end
+
+  UntypedProvided = Class.new(Skyward::API) do
+    get "/", to: :index
+
+    def index(current_user:, visitor:) = [Todo.new(id: current_user.id, title: visitor.to_s)]
   end
 end

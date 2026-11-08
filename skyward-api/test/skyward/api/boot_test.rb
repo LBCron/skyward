@@ -19,17 +19,18 @@ describe Skyward::API::Boot do
     ]
   )
 
-  define_method(:boot) do |*mounts, strict: false|
+  define_method(:boot) do |*mounts, providers: {}, strict: false|
     Skyward::API::Boot.endpoints(
       mounts.map { |api, at| Skyward::API::Builder::Mount.new(api:, at:) },
+      providers:,
       reader:,
       max_body_size: 10,
       strict:
     )
   end
 
-  define_method(:refusal) do |*mounts, strict: false|
-    assert_raises(Skyward::BootError) { boot(*mounts, strict:) }.message
+  define_method(:refusal) do |*mounts, providers: {}, strict: false|
+    assert_raises(Skyward::BootError) { boot(*mounts, providers:, strict:) }.message
   end
 
   def keyword(name, source, required, type)
@@ -37,6 +38,16 @@ describe Skyward::API::Boot do
   end
 
   let(:todos) { BootFixtures::Todos.new }
+
+  let(:authenticated) { BootFixtures::Authenticated.new }
+  let(:current_user) { BootFixtures::CurrentUser.new }
+  let(:tenant) { ->(request) { request.headers["x-tenant"] } }
+
+  def provided(api, to, **providers) = endpoint(boot([api, "/"], providers:), to).providers
+
+  def response(klass) = Skyward::API::Router::Response.new(klass:)
+
+  def rbs(type) = RBS::Parser.parse_type(type)
 
   def endpoint(endpoints, to, verb = "GET") = endpoints.find { |found| found.to == to && found.verb == verb }
 
@@ -103,6 +114,75 @@ describe Skyward::API::Boot do
 
     it "puts a root route mounted at / at /" do
       assert_equal ["", ""], endpoint(boot([todos, "/"]), :index).pattern
+    end
+
+    describe "providers" do
+      it "refuses a provider that's a module" do
+        error = assert_raises(Skyward::BootError) do
+          provided(authenticated, :me, current_user: BootFixtures::ModuleProvider)
+        end
+
+        assert_equal "The :current_user provider's `call` is defined on a single object, such as a module or a " \
+                     "class, and Skyward API can't read the signature of those. Provide an instance of a class.",
+                     error.message
+      end
+
+      it "refuses a provider that's a class with a class-level call" do
+        error = assert_raises(Skyward::BootError) do
+          provided(authenticated, :me, current_user: BootFixtures::ClassProvider)
+        end
+
+        assert_equal "The :current_user provider's `call` is defined on a single object, such as a module or a " \
+                     "class, and Skyward API can't read the signature of those. Provide an instance of a class.",
+                     error.message
+      end
+
+      it "reads nothing from a provider with no signature" do
+        provider = provided(authenticated, :me, current_user: BootFixtures::UnsignedProvider.new).first
+
+        assert_equal [[], nil], [provider.responses, provider.value]
+      end
+
+      it "reads nothing from a lambda, whose signature returns untyped" do
+        provider = provided(authenticated, :me, current_user: ->(_request) {}).first
+
+        assert_equal [[], nil], [provider.responses, provider.value]
+      end
+
+      it "compiles a serializer that answers any response value by its status for a provider with no signature" do
+        serializer = provided(authenticated, :me, current_user: tenant).first.serializer
+
+        assert_equal 403, serializer.call(Skyward.forbidden("Admins only")).first
+      end
+
+      it "reads a provider's response values, and the rest of its return type as its value" do
+        provider = provided(authenticated, :me, current_user:).first
+
+        assert_equal [[response(Skyward::Unauthorized)], [rbs("::BootFixtures::User")]],
+                     [provider.responses, provider.value]
+      end
+
+      it "compiles a serializer for the provider's response values, whose errors name the provider" do
+        serializer = provided(authenticated, :me, current_user:).first.serializer
+        error = assert_raises(Skyward::API::ReturnTypeError) { serializer.call(Skyward.forbidden("Admins only")) }
+
+        assert_equal "The :current_user provider returned Skyward::Forbidden, which isn't Skyward::Unauthorized",
+                     error.message
+      end
+
+      it "reads the signature of a call inherited from a parent class" do
+        provider = provided(authenticated, :me, current_user: Class.new(BootFixtures::CurrentUser).new).first
+
+        assert_equal [[response(Skyward::Unauthorized)], [rbs("::BootFixtures::User")]],
+                     [provider.responses, provider.value]
+      end
+
+      it "reads a Method's signature from the module that defines it, under its own name" do
+        provider = provided(authenticated, :me, current_user: BootFixtures::Sessions.new.method(:user_for)).first
+
+        assert_equal [[response(Skyward::Unauthorized)], [rbs("::BootFixtures::User")]],
+                     [provider.responses, provider.value]
+      end
     end
 
     it "refuses a summary with a line break" do
@@ -226,6 +306,71 @@ describe Skyward::API::Boot do
                    "The route has a path parameter :id, but the method has no `id:` keyword. " \
                    "Add `id:` to the method, or rename the path parameter.",
                    refusal([BootFixtures::Unnamed.new, "/"])
+    end
+
+    describe "provided keywords" do
+      it "refuses a path parameter that's provided" do
+        assert_equal "BootFixtures::ProvidedPath#show (GET /:current_user)\n  " \
+                     "The route has a path parameter :current_user, but :current_user is provided too, " \
+                     "so `current_user:` can't be both. Rename the path parameter, or provide another name.",
+                     refusal([BootFixtures::ProvidedPath.new, "/"], providers: { current_user: })
+      end
+
+      it "takes a provided keyword from its provider, never the query string" do
+        me = endpoint(boot([authenticated, "/"], providers: { current_user: }), :me)
+
+        providers = me.providers.map { |provider| [provider.name, provider.callable] }
+
+        assert_equal [[], [[:current_user, current_user]]], [me.keywords, providers]
+      end
+
+      it "takes any provider's value for an untyped endpoint's keyword, with its responses, never the query string" do
+        index = endpoint(boot([BootFixtures::UnsignedProvided.new, "/"], providers: { current_user: }), :index)
+
+        providers = index.providers.map { |provider| [provider.name, provider.responses] }
+
+        assert_equal [[keyword(:limit, :query, false, untyped)], [[:current_user, [response(Skyward::Unauthorized)]]]],
+                     [index.keywords, providers]
+      end
+
+      it "takes any provider's value for a keyword its signature types untyped, nullable or not" do
+        providers = { current_user:, visitor: BootFixtures::Visitor.new }
+        index = endpoint(boot([BootFixtures::UntypedProvided.new, "/"], providers:), :index)
+
+        assert_equal %i[current_user visitor], index.providers.map(&:name)
+      end
+
+      it "compares a nullable union with its provider's value in any order" do
+        provider = provided(BootFixtures::Visiting.new, :index, visitor: BootFixtures::Visitor.new).first
+
+        assert_equal [response(Skyward::Unauthorized)], provider.responses
+      end
+
+      it "refuses a keyword typed other than its provider's value" do
+        assert_equal "BootFixtures::MistypedUser#index (GET /)\n  " \
+                     "`current_user:` is typed as BootFixtures::Todo, but the :current_user provider returns " \
+                     "BootFixtures::User, besides any responses. Give them the same type.",
+                     refusal([BootFixtures::MistypedUser.new, "/"], providers: { current_user: })
+      end
+
+      it "refuses a keyword whose provider returns only responses" do
+        assert_equal "BootFixtures::Guarded#index (GET /)\n  " \
+                     "`admin:` is typed as BootFixtures::User, but the :admin provider returns only responses. " \
+                     "Give them the same type.",
+                     refusal([BootFixtures::Guarded.new, "/"], providers: { admin: BootFixtures::Guard.new })
+      end
+
+      it "keeps an endpoint's providers in its keywords' order, apart from its other keywords" do
+        index = endpoint(boot([authenticated, "/"], providers: { current_user:, tenant: }), :index)
+
+        assert_equal [%i[tenant current_user], [:limit]], [index.providers.map(&:name), index.keywords.map(&:name)]
+      end
+
+      it "compiles the providers into the endpoint's inputs" do
+        inputs = endpoint(boot([authenticated, "/"], providers: { current_user: }), :me).inputs
+
+        assert_equal 401, inputs.call({ "skyward.request_id" => "abc-123" }, {}).first
+      end
     end
 
     describe "keywords and the return type" do
@@ -478,6 +623,19 @@ describe Skyward::API::Boot do
 
       it "names a keyword typed untyped?" do
         assert_match(/leaves `limit:` untyped/, refusal([BootFixtures::NullableUntypedKeyword.new, "/"], strict: true))
+      end
+
+      it "names each provided keyword a signature leaves untyped, nullable or not" do
+        providers = { current_user:, visitor: BootFixtures::Visitor.new }
+
+        assert_equal "BootFixtures::UntypedProvided#index (GET /)\n  " \
+                     "Its signature leaves `current_user:` and `visitor:` untyped, " \
+                     "but strict: true refuses an untyped endpoint. Give each a type.",
+                     refusal([BootFixtures::UntypedProvided.new, "/"], providers:, strict: true)
+      end
+
+      it "boots an endpoint whose provider has no signature" do
+        assert_equal 2, boot([authenticated, "/"], providers: { current_user:, tenant: }, strict: true).size
       end
 
       it "boots untyped inside a type, as in Array[untyped]" do
