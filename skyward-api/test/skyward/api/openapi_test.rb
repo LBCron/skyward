@@ -70,6 +70,7 @@ describe Skyward::API::OpenAPI do
       description:,
       keywords:,
       returns:,
+      signature: "() -> untyped",
       inputs: Skyward::API::Inputs.new(keywords, max_body_size: 10),
       serializer: Skyward::API::Serializer.new(returns, label: "")
     )
@@ -83,7 +84,11 @@ describe Skyward::API::OpenAPI do
     description: nil,
     schema_names: {}
   )
-    Skyward::API::OpenAPI.json(endpoints, static:, title:, version:, description:, schema_names:)
+    Skyward::API::OpenAPI.json(
+      endpoints,
+      static:,
+      document: -> { Skyward::API::OpenAPI.document(endpoints, title:, version:, description:, schema_names:) }
+    )
   end
 
   def document(*, **) = JSON.parse(json(*, **))
@@ -110,6 +115,13 @@ describe Skyward::API::OpenAPI do
                      "With docs: true, /openapi.json serves the OpenAPI document. " \
                      "Change the route's path, or leave out docs:.",
                      refusal(endpoint(:docs, verb: "POST", path: ["", "openapi.json"]))
+      end
+
+      it "refuses a route at /openapi.json before building the document, which has problems of its own" do
+        assert_match(
+          %r{\AOpenAPIFixtures::Todos#docs \(GET /openapi\.json\)\n  With docs: true},
+          refusal(endpoint(:docs, path: ["", "openapi.json"]), endpoint(:docs, path: ["", "docs"]))
+        )
       end
 
       it "allows a path parameter where /openapi.json would be" do
@@ -605,6 +617,28 @@ describe Skyward::API::OpenAPI do
       errors = JSONSchemer.openapi(document(*endpoints, description: "Todos.")).validate.map { |error| error["error"] }
 
       assert_empty errors
+    end
+  end
+
+  describe ".document" do
+    def built(*endpoints)
+      Skyward::API::OpenAPI.document(endpoints, title: "API", version: "0.1.0", description: nil, schema_names: {})
+    end
+
+    it "builds the document .json writes" do
+      assert_equal document(endpoint(:index)), JSON.parse(JSON.generate(built(endpoint(:index))))
+    end
+
+    it "allows a route at /openapi.json, which only a served document needs free" do
+      assert_equal ["/openapi.json"], built(endpoint(:docs, path: ["", "openapi.json"]))[:paths].keys
+    end
+
+    it "refuses a document it can't build, such as one with two operations of one ID" do
+      error = assert_raises(Skyward::BootError) do
+        built(endpoint(:index), endpoint(:index, path: ["", "todos", "done"]))
+      end
+
+      assert_match(/Its OpenAPI operation ID, OpenAPIFixtures\.Todos_index, is/, error.message)
     end
   end
 end
