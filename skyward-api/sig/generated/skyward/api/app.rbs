@@ -26,8 +26,9 @@ class Skyward::API::App
   def route: (Hash[String, untyped] env) -> Skyward::rack
 
   # @rbs match: Skyward::API::Router::Match
+  # @rbs env: Hash[String, untyped]
   # @rbs return: Skyward::rack
-  def respond: (Skyward::API::Router::Match match) -> Skyward::rack
+  def respond: (Skyward::API::Router::Match match, Hash[String, untyped] env) -> Skyward::rack
 
   # A server closes the body it sends, so one that's never sent is closed here.
   # @rbs body: untyped
@@ -42,8 +43,9 @@ class Skyward::API::App
   # @rbs status: Integer
   # @rbs title: String
   # @rbs headers: Hash[String, String]
+  # @rbs **members: untyped
   # @rbs return: response
-  def problem: (Integer status, String title, ?Hash[String, String] headers) -> response
+  def problem: (Integer status, String title, ?Hash[String, String] headers, **untyped members) -> response
 
   # @rbs status: Integer
   # @rbs headers: Hash[String, String]

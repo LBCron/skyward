@@ -25,15 +25,16 @@ end
 module Skyward
   # @rbs! type rack = [Integer, Hash[String, String], untyped]
 
-  # @rbs (?signatures: String, ?logger: API::_Logger?, ?on_error: API::_OnError?) { (API::Builder) -> void } -> API::RequestId
-  def self.app(signatures: "sig", logger: API::LineLogger.new($stdout), on_error: nil, &)
+  # @rbs (?signatures: String, ?logger: API::_Logger?, ?on_error: API::_OnError?, ?max_body_size: Integer)
+  #   { (API::Builder) -> void } -> API::RequestId
+  def self.app(signatures: "sig", logger: API::LineLogger.new($stdout), on_error: nil, max_body_size: 1_048_576, &)
     raise ArgumentError, "Skyward.app needs a block that mounts the app's APIs" unless block_given?
 
     builder = API::Builder.new
     yield builder
     builder.freeze
     reader = Types::Reader.new(Signatures.load(signatures))
-    router = API::Router.new(API::Boot.endpoints(builder.mounts, reader:))
+    router = API::Router.new(API::Boot.endpoints(builder.mounts, reader:, max_body_size:))
     app = API::Rescue.new(
       API::App.new(router, API::Static.new(builder.statics), builder.middleware),
       logger:,

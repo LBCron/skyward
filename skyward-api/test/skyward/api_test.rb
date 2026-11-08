@@ -73,6 +73,27 @@ describe Skyward do
       assert_match(%r{\ABootFixtures::Unsigned#index \(GET /\)\n}, error.message)
     end
 
+    describe "inputs" do
+      def client(**options)
+        app = Skyward.app(signatures:, logger: nil, **options) { |builder| builder.mount BootFixtures::Todos.new }
+        Skyward::Test.client(app)
+      end
+
+      let(:overhead) { '{"title":""}'.bytesize }
+
+      it "reads a body of up to 1 MiB by default" do
+        assert_equal 200, client.post("/", json: { title: "a" * (1_048_576 - overhead) }).status
+      end
+
+      it "refuses a body over 1 MiB by default" do
+        assert_equal 413, client.post("/", json: { title: "a" * (1_048_576 - overhead + 1) }).status
+      end
+
+      it "refuses a body over the max_body_size it's given" do
+        assert_equal 413, client(max_body_size: 10).post("/", json: { title: "Ship it" }).status
+      end
+    end
+
     describe "answering by the return type" do
       let(:client) do
         Skyward::Test.client(

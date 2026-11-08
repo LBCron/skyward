@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "stringio"
 require "test_helper"
 require_relative "../../fixtures/boot/boot_fixtures"
 
@@ -18,7 +19,11 @@ describe Skyward::API::Boot do
   )
 
   define_method(:boot) do |*mounts|
-    Skyward::API::Boot.endpoints(mounts.map { |api, at| Skyward::API::Builder::Mount.new(api:, at:) }, reader:)
+    Skyward::API::Boot.endpoints(
+      mounts.map { |api, at| Skyward::API::Builder::Mount.new(api:, at:) },
+      reader:,
+      max_body_size: 10
+    )
   end
 
   define_method(:refusal) do |*mounts|
@@ -283,6 +288,13 @@ describe Skyward::API::Boot do
                      "The return type can't be read: Skyward API doesn't read Hash[Symbol, untyped]. " \
                      "Use a record, or a class with public typed attr_readers instead.",
                      refusal([BootFixtures::HashReturn.new, "/"])
+      end
+
+      it "compiles the keywords into the endpoint's inputs, reading a body up to max_body_size" do
+        inputs = endpoint(boot([todos, "/"]), :create, "POST").inputs
+        env = { "CONTENT_TYPE" => "application/json", "rack.input" => StringIO.new('{"title":"Ship it"}') }
+
+        assert_equal :content_too_large, inputs.call(env, {})
       end
 
       it "labels a type the reader refuses outright" do

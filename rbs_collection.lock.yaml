@@ -77,6 +77,10 @@ gems:
   version: '0'
   source:
     type: stdlib
+- name: uri
+  version: '0'
+  source:
+    type: stdlib
 - name: zeitwerk
   version: '2.8'
   source:

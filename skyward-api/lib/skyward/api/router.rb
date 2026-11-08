@@ -28,12 +28,14 @@ class Skyward::API::Router
     :to, #: Symbol
     :keywords, #: Array[Keyword]
     :returns, #: Array[returned]
+    :inputs, #: Skyward::API::Inputs
     :serializer #: Skyward::API::Serializer
   )
 
   Match = Data.define(
     :api, #: Skyward::API
     :to, #: Symbol
+    :inputs, #: Skyward::API::Inputs
     :params, #: Hash[Symbol, String]
     :serializer #: Skyward::API::Serializer
   )
@@ -78,7 +80,9 @@ class Skyward::API::Router
     return unless endpoint.verb == verb
 
     params = params_for(endpoint.pattern, segments)
-    Match.new(api: endpoint.api, to: endpoint.to, params:, serializer: endpoint.serializer) if params
+    return unless params
+
+    Match.new(api: endpoint.api, to: endpoint.to, inputs: endpoint.inputs, params:, serializer: endpoint.serializer)
   end
 
   # @rbs pattern: Array[String | Symbol]

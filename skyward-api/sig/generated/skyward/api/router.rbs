@@ -65,14 +65,16 @@ class Skyward::API::Router
 
     attr_reader returns(): Array[returned]
 
+    attr_reader inputs(): Skyward::API::Inputs
+
     attr_reader serializer(): Skyward::API::Serializer
 
-    def self.new: (String verb, Array[String | Symbol] pattern, Skyward::API api, Symbol to, Array[Keyword] keywords, Array[returned] returns, Skyward::API::Serializer serializer) -> instance
-                | (verb: String, pattern: Array[String | Symbol], api: Skyward::API, to: Symbol, keywords: Array[Keyword], returns: Array[returned], serializer: Skyward::API::Serializer) -> instance
+    def self.new: (String verb, Array[String | Symbol] pattern, Skyward::API api, Symbol to, Array[Keyword] keywords, Array[returned] returns, Skyward::API::Inputs inputs, Skyward::API::Serializer serializer) -> instance
+                | (verb: String, pattern: Array[String | Symbol], api: Skyward::API, to: Symbol, keywords: Array[Keyword], returns: Array[returned], inputs: Skyward::API::Inputs, serializer: Skyward::API::Serializer) -> instance
 
-    def self.members: () -> [ :verb, :pattern, :api, :to, :keywords, :returns, :serializer ]
+    def self.members: () -> [ :verb, :pattern, :api, :to, :keywords, :returns, :inputs, :serializer ]
 
-    def members: () -> [ :verb, :pattern, :api, :to, :keywords, :returns, :serializer ]
+    def members: () -> [ :verb, :pattern, :api, :to, :keywords, :returns, :inputs, :serializer ]
   end
 
   class Match < Data
@@ -80,16 +82,18 @@ class Skyward::API::Router
 
     attr_reader to(): Symbol
 
+    attr_reader inputs(): Skyward::API::Inputs
+
     attr_reader params(): Hash[Symbol, String]
 
     attr_reader serializer(): Skyward::API::Serializer
 
-    def self.new: (Skyward::API api, Symbol to, Hash[Symbol, String] params, Skyward::API::Serializer serializer) -> instance
-                | (api: Skyward::API, to: Symbol, params: Hash[Symbol, String], serializer: Skyward::API::Serializer) -> instance
+    def self.new: (Skyward::API api, Symbol to, Skyward::API::Inputs inputs, Hash[Symbol, String] params, Skyward::API::Serializer serializer) -> instance
+                | (api: Skyward::API, to: Symbol, inputs: Skyward::API::Inputs, params: Hash[Symbol, String], serializer: Skyward::API::Serializer) -> instance
 
-    def self.members: () -> [ :api, :to, :params, :serializer ]
+    def self.members: () -> [ :api, :to, :inputs, :params, :serializer ]
 
-    def members: () -> [ :api, :to, :params, :serializer ]
+    def members: () -> [ :api, :to, :inputs, :params, :serializer ]
   end
 
   METHODS: Array[String]

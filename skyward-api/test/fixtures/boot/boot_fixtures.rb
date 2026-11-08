@@ -30,9 +30,9 @@ module BootFixtures
 
     def index(done: nil, tags: []) = { done:, tags: }
 
-    def show(id:) = { id: }
+    def show(id:) = Todo.new(id:, title: "Ship it")
 
-    def create(body:) = body
+    def create(body:) = Todo.new(id: 1, title: body[:title])
 
     def destroy(id:) = { id: }
   end
@@ -226,8 +226,7 @@ module BootFixtures
 
     def show(id:) = not_found("Todo #{id} does not exist")
 
-    # Path parameters arrive as Strings until coercion lands.
-    def user(id:) = User.new(id: Integer(id), name: "Ada", password_hash: "$2a$12$secret")
+    def user(id:) = User.new(id:, name: "Ada", password_hash: "$2a$12$secret")
 
     def misfit(id:) = user(id:)
 

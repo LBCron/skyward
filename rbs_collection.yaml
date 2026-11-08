@@ -26,4 +26,5 @@ gems:
   - name: json
   - name: securerandom
   - name: time
+  - name: uri
   - name: zeitwerk
